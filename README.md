@@ -104,10 +104,18 @@ JWT_EXPIRES_IN=7d
 
 CLIENT_URL=http://localhost:5173
 
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
 CURRENCY=INR
 SHIPPING_FREE_THRESHOLD=1000
 SHIPPING_CHARGE=50
 ```
+
+Create a Cloudinary account and copy these values from its dashboard into `backend/.env`. Keep the API secret on the backend; do not expose it in frontend environment variables or commit it to source control.
+
+Approved sellers and admins can upload up to five product images per request using `POST /api/products/images` with `multipart/form-data` field name `images` (JPEG, PNG, WebP, GIF, or AVIF; up to 5 MB each). The endpoint returns secure image URLs. Pass those URLs as the `images` array when creating a product with `POST /api/products`.
 
 ---
 
@@ -127,14 +135,22 @@ npm start       # Starts production server
 
 ---
 
-## 6. Development Credentials (Testing Only)
+## 6. Create the First Admin
 
-| Role | Email | Password | Details |
-|---|---|---|---|
-| **Admin** | `admin@nammacart.com` | `AdminPassword123!` | Platform management & seller approvals |
-| **Seller 1** | `seller@nammacart.com` | `SellerPassword123!` | *Tamil Nadu Heritage Crafts* (Kumbakonam) |
-| **Seller 2** | `meenakshi@nammacart.com` | `SellerPassword123!` | *Kanchi Loom Weaves* (Kanchipuram) |
-| **Customer** | `customer@nammacart.com` | `CustomerPassword123!` | Regular buyer account (Chennai) |
+The API does not expose a public admin-registration endpoint. To create the initial admin, add temporary credentials to `backend/.env`:
+
+```env
+ADMIN_EMAIL=your-admin-email@example.com
+ADMIN_PASSWORD=use-a-strong-unique-password
+```
+
+From the `backend` directory, run:
+
+```bash
+npm run create-admin
+```
+
+The script saves the admin in MongoDB using the User model, which hashes the password. It will not promote an existing non-admin account. After successful creation, remove the temporary `ADMIN_EMAIL` and `ADMIN_PASSWORD` values from `.env`, then log in through `POST /api/auth/login`. Do not commit credentials or use example passwords in production.
 
 ---
 
