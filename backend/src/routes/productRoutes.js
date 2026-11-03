@@ -4,6 +4,7 @@ const productController = require("../controllers/productController");
 const { authenticate } = require("../middleware/authentication");
 const { requireApprovedSeller } = require("../middleware/authorization");
 const { validateRequest } = require("../middleware/validation");
+const uploadProductImages = require("../middleware/productImageUpload");
 
 const router = express.Router();
 
@@ -47,6 +48,15 @@ router.get("/categories/:slug", productController.getCategoryBySlug);
 router.get("/featured", productController.getFeaturedProducts);
 router.get("/search", productController.searchProducts);
 router.get("/category/:slug", productController.getProductsByCategorySlug);
+
+// Upload product images for approved sellers and admins before creating a product.
+router.post(
+  "/images",
+  authenticate,
+  requireApprovedSeller,
+  uploadProductImages,
+  productController.uploadProductImages
+);
 
 // Catalog list and single item retrieval
 router.get("/", productController.getAllProducts);

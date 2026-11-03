@@ -1,5 +1,6 @@
 const productService = require("../services/productService");
-const { successResponse } = require("../middleware/validation");
+const cloudinaryService = require("../services/cloudinaryService");
+const { successResponse, errorResponse } = require("../middleware/validation");
 
 // Category Handlers
 function getCategories(_req, res, next) {
@@ -94,6 +95,19 @@ async function createProduct(req, res, next) {
   }
 }
 
+async function uploadProductImages(req, res, next) {
+  try {
+    if (!req.files?.length) {
+      return errorResponse(res, 400, "At least one image file is required in the 'images' field.");
+    }
+
+    const images = await cloudinaryService.uploadProductImages(req.files, req.user._id);
+    return successResponse(res, 201, "Product images uploaded successfully", { images });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function updateProduct(req, res, next) {
   try {
     const product = await productService.updateProduct(req.params.id, req.body, req.user);
@@ -121,6 +135,7 @@ module.exports = {
   searchProducts,
   getProductById,
   createProduct,
+  uploadProductImages,
   updateProduct,
   deleteProduct,
 };
