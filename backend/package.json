@@ -1,0 +1,23 @@
+{
+  "name": "namma-cart-backend",
+  "version": "1.0.0",
+  "description": "Namma Cart API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.11"
+  }
+}
