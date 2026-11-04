@@ -2,8 +2,8 @@ const express = require("express");
 const { body, param } = require("express-validator");
 const productController = require("../controllers/productController");
 const { authenticate } = require("../middleware/authentication");
-const { authorize } = require("../middleware/authorization");
-const { validateRequest, errorResponse } = require("../middleware/validation");
+const { requireApprovedSeller } = require("../middleware/authorization");
+const { validateRequest } = require("../middleware/validation");
 
 const router = express.Router();
 const allowedFields = ["title", "price", "description", "category", "image", "rating"];
@@ -47,6 +47,8 @@ router.get("/categories/:slug", productController.getCategoryBySlug);
 router.get("/featured", productController.getFeaturedProducts);
 router.get("/search", productController.searchProducts);
 router.get("/category/:slug", productController.getProductsByCategorySlug);
+
+// Catalog list and single item retrieval
 router.get("/", productController.getAllProducts);
 router.get("/:id", validateRequest([param("id").isMongoId().withMessage("Invalid product ID")]), productController.getProductById);
 
