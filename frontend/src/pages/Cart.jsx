@@ -65,7 +65,7 @@ export default function Cart() {
                   {imageOf(item.product) ? (
                     <img src={imageOf(item.product)} alt={item.product.name} />
                   ) : (
-                    <span>âœ¿</span>
+                    <span>D</span>
                   )}
                 </Link>
                 <div className="cart-product">

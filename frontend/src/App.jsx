@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Provider } from "react-redux";
+import { store } from "./store/store.js";
 import Header from "./components/Header.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
@@ -45,5 +47,5 @@ function Layout() {
 }
 
 export default function App() {
-  return <BrowserRouter><AuthProvider><CartProvider><Layout /></CartProvider></AuthProvider></BrowserRouter>;
+  return <Provider store={store}><BrowserRouter><AuthProvider><CartProvider><Layout /></CartProvider></AuthProvider></BrowserRouter></Provider>;
 }

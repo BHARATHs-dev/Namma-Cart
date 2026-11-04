@@ -1,6 +1,15 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { request } from "../api.js";
 import { useAuth } from "./AuthContext.jsx";
+import {
+  addCartItem,
+  clearCart,
+  removeCartItem,
+  setCartItems,
+  setCartMessage,
+  updateCartItem,
+} from "../store/cartSlice.js";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "namma-cart-guest-cart";
@@ -11,9 +20,11 @@ export const useCart = () => useContext(CartContext);
 
 export function CartProvider({ children }) {
   const { token, loading: authLoading } = useAuth();
-  const [items, setItems] = useState(readGuestCart);
-  const [message, setMessage] = useState("");
+  const dispatch = useDispatch();
+  const items = useSelector((state) => state.cart.items);
+  const message = useSelector((state) => state.cart.message);
   const syncing = useRef(null);
+  const setMessage = (value) => dispatch(setCartMessage(value));
 
   async function syncAuthCart() {
     if (syncing.current) return syncing.current;
@@ -43,7 +54,7 @@ export function CartProvider({ children }) {
           else localStorage.removeItem(STORAGE_KEY);
         }
         const result = await request("/cart");
-        setItems(result.data.items || []);
+        dispatch(setCartItems(result.data.items || []));
       } catch (error) { setMessage(error.message); throw error; }
     })();
     try { await syncing.current; } finally { syncing.current = null; }
@@ -51,19 +62,19 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!token) { setItems(readGuestCart()); return; }
+    if (!token) { dispatch(setCartItems(readGuestCart())); return; }
     syncAuthCart().catch(() => {});
   }, [token, authLoading]);
 
-  function storeGuest(next) {
+  function storeGuest(next, action) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setItems(next);
+    dispatch(action);
   }
 
   async function refresh() {
     if (token) {
       const result = await request("/cart");
-      setItems(result.data.items || []);
+      dispatch(setCartItems(result.data.items || []));
     }
   }
 
@@ -78,7 +89,16 @@ export function CartProvider({ children }) {
     const found = current.find((item) => item.product._id === product._id);
     const nextQuantity = (found?.quantity || 0) + quantity;
     if (nextQuantity > product.stock) throw new Error(`Only ${product.stock} available.`);
-    storeGuest(found ? current.map((item) => item.product._id === product._id ? { ...item, quantity: nextQuantity } : item) : [...current, { product, quantity }]);
+    storeGuest(
+      found
+        ? current.map((item) =>
+            item.product._id === product._id
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          )
+        : [...current, { product, quantity }],
+      addCartItem({ product, quantity }),
+    );
   }
 
   async function update(id, quantity) {
@@ -91,7 +111,10 @@ export function CartProvider({ children }) {
     const current = readGuestCart();
     const row = current.find((item) => item.product._id === id);
     if (row && quantity > row.product.stock) throw new Error(`Only ${row.product.stock} available.`);
-    storeGuest(current.map((item) => item.product._id === id ? { ...item, quantity } : item));
+    storeGuest(
+      current.map((item) => (item.product._id === id ? { ...item, quantity } : item)),
+      updateCartItem({ id, quantity }),
+    );
   }
 
   async function remove(id) {
@@ -100,13 +123,16 @@ export function CartProvider({ children }) {
       await refresh();
       return;
     }
-    storeGuest(readGuestCart().filter((item) => item.product._id !== id));
+    storeGuest(
+      readGuestCart().filter((item) => item.product._id !== id),
+      removeCartItem(id),
+    );
   }
 
   async function clear() {
     if (token) await request("/cart/clear", { method: "DELETE" });
     localStorage.removeItem(STORAGE_KEY);
-    setItems([]);
+    dispatch(clearCart());
   }
 
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
