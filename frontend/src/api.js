@@ -28,22 +28,28 @@ export async function request(path, options = {}) {
   }
 
   if (path.startsWith("/products")) {
-    const fromApi = (product) => ({
-      _id: product.id,
-      name: product.title,
-      price: product.price,
-      discountPrice: product.discountPrice || 0,
-      stock: product.stock,
-      description: product.description,
-      category: product.category,
-      images: product.image ? [product.image] : [],
-      material: product.material || "",
-      origin: product.origin || "Tamil Nadu",
-      artisanName: product.artisanName || "",
-      seller: product.seller || null,
-      averageRating: product.rating?.rate || 0,
-      totalReviews: product.rating?.count || 0,
-    });
+    const fromApi = (product) => {
+      const images = (Array.isArray(product.images) ? product.images : product.images ? [product.images] : [])
+        .filter((image) => typeof image === "string" && image);
+      if (!images.length && typeof product.image === "string" && product.image) images.push(product.image);
+
+      return {
+        _id: product.id,
+        name: product.title,
+        price: product.price,
+        discountPrice: product.discountPrice || 0,
+        stock: product.stock,
+        description: product.description,
+        category: product.category,
+        images,
+        material: product.material || "",
+        origin: product.origin || "Tamil Nadu",
+        artisanName: product.artisanName || "",
+        seller: product.seller || null,
+        averageRating: product.rating?.rate || 0,
+        totalReviews: product.rating?.count || 0,
+      };
+    };
     if (Array.isArray(result)) {
       const query = new URLSearchParams(path.split("?")[1] || "");
       const page = Number(query.get("page") || 1);

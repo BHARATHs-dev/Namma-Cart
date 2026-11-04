@@ -3,7 +3,19 @@ const productService = require("../services/productService");
 const cloudinaryService = require("../services/cloudinaryService");
 const { successResponse, errorResponse } = require("../middleware/validation");
 
+function getProductImages(product) {
+  const images = Array.isArray(product.images)
+    ? product.images.filter((image) => typeof image === "string" && image)
+    : typeof product.images === "string" && product.images
+      ? [product.images]
+      : [];
+
+  if (images.length) return images;
+  return typeof product.image === "string" && product.image ? [product.image] : [];
+}
+
 function formatProduct(product) {
+  const images = getProductImages(product);
   return {
     id: String(product._id),
     title: product.name,
@@ -12,7 +24,8 @@ function formatProduct(product) {
     stock: product.stock,
     description: product.description,
     category: product.category,
-    image: product.images?.[0] || "",
+    image: images[0] || "",
+    images,
     material: product.material,
     origin: product.origin,
     artisanName: product.artisanName,
@@ -27,7 +40,8 @@ function toModelData(data) {
   if (data.price !== undefined) result.price = data.price;
   if (data.description !== undefined) result.description = data.description;
   if (data.category !== undefined) result.category = data.category;
-  if (data.image !== undefined) result.images = [data.image];
+  if (data.images !== undefined) result.images = data.images;
+  else if (data.image !== undefined) result.images = [data.image];
   if (data.rating?.rate !== undefined) result.averageRating = data.rating.rate;
   if (data.rating?.count !== undefined) result.totalReviews = data.rating.count;
   return result;

@@ -34,9 +34,12 @@ Product endpoints return this shape, with MongoDB’s `_id` exposed as `id`. Int
   "description": "Premium cotton T-shirt",
   "category": "men's clothing",
   "image": "https://example.com/tshirt.jpg",
+  "images": ["https://example.com/tshirt-front.jpg", "https://example.com/tshirt-back.jpg"],
   "rating": { "rate": 4.5, "count": 25 }
 }
 ```
+
+The `images` array contains all image URLs stored with the MongoDB product. The legacy `image` field remains available and contains the first image.
 
 ## Product endpoints
 
@@ -51,7 +54,7 @@ Product endpoints return this shape, with MongoDB’s `_id` exposed as `id`. Int
 | PUT | `/api/products/:id` | Admin token | Partially update a product |
 | DELETE | `/api/products/:id` | Admin token | Deactivate a product so it no longer appears in public listings |
 
-`PUT` preserves every field omitted from the request. Only `title`, `price`, `description`, `category`, `image`, and `rating.rate` / `rating.count` are accepted. IDs, MongoDB fields, and unexpected fields are rejected. Price must be non-negative, rating rate must be from 0 to 5, and rating count must be a non-negative whole number. A created product is assigned to the signed-in admin and starts with 20 units in stock in the marketplace model.
+`PUT` preserves every field omitted from the request. Only `title`, `price`, `description`, `category`, `image` or `images`, and `rating.rate` / `rating.count` are accepted. IDs, MongoDB fields, and unexpected fields are rejected. Price must be non-negative, image URLs must use HTTP or HTTPS, rating rate must be from 0 to 5, and rating count must be a non-negative whole number. A created product is assigned to the signed-in admin and starts with 20 units in stock in the marketplace model.
 
 Product list endpoints accept `page` and `limit` query values. Responses remain JSON arrays and include `X-Total-Count` and `X-Total-Pages` headers for pagination. For example, `/api/products?page=1&limit=8` returns the first eight products. The API exposes these headers to the configured frontend origin.
 
