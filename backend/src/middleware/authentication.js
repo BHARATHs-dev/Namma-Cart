@@ -2,78 +2,48 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { errorResponse } = require("./validation");
 
-/**
- * Verifies JWT token from Authorization header and attaches user to req.user
- */
+const tokenErrors = {
+  TokenExpiredError: "Token has expired. Please log in again.",
+  JsonWebTokenError: "Invalid authentication token.",
+};
+
 async function authenticate(req, res, next) {
+  const header = req.headers.authorization || "";
+  if (!header.startsWith("Bearer ")) {
+    return errorResponse(res, 401, "Please log in to continue.");
+  }
+
+  const token = header.slice(7);
+  if (!token) return errorResponse(res, 401, "Authentication token is missing.");
+
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return errorResponse(res, 401, "Authentication required. Please provide a valid Bearer token.");
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      return errorResponse(res, 401, "Authentication token missing.");
-    }
-
-    const secret = process.env.JWT_SECRET || "replace_with_a_secure_secret";
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return errorResponse(res, 401, "Token has expired. Please log in again.");
-      }
-      return errorResponse(res, 401, "Invalid authentication token.");
-    }
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "replace_with_a_secure_secret");
     const user = await User.findById(decoded.id);
 
-    if (!user) {
-      return errorResponse(res, 401, "The user belonging to this token no longer exists.");
-    }
-
-    if (!user.isActive) {
-      return errorResponse(res, 403, "User account has been deactivated. Please contact support.");
-    }
+    if (!user) return errorResponse(res, 401, "User account was not found.");
+    if (!user.isActive) return errorResponse(res, 403, "This account has been deactivated.");
 
     req.user = user;
     next();
   } catch (error) {
-    return next(error);
-  }
-}
-
-/**
- * Optional authentication - attaches user if valid token exists, otherwise continues as guest
- */
-async function optionalAuthenticate(req, _res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      const secret = process.env.JWT_SECRET || "replace_with_a_secure_secret";
-      try {
-        const decoded = jwt.verify(token, secret);
-        const user = await User.findById(decoded.id);
-        if (user && user.isActive) {
-          req.user = user;
-        }
-      } catch (_err) {
-        // Ignore invalid token for optional auth
-      }
-    }
-    next();
-  } catch (error) {
+    if (tokenErrors[error.name]) return errorResponse(res, 401, tokenErrors[error.name]);
     next(error);
   }
 }
 
-module.exports = {
-  authenticate,
-  optionalAuthenticate,
-};
+async function optionalAuthenticate(req, _res, next) {
+  const header = req.headers.authorization || "";
+  if (!header.startsWith("Bearer ")) return next();
+
+  try {
+    const decoded = jwt.verify(header.slice(7), process.env.JWT_SECRET || "replace_with_a_secure_secret");
+    const user = await User.findById(decoded.id);
+    if (user?.isActive) req.user = user;
+    next();
+  } catch (error) {
+    if (tokenErrors[error.name]) return next();
+    next(error);
+  }
+}
+
+module.exports = { authenticate, optionalAuthenticate };

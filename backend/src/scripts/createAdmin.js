@@ -12,13 +12,10 @@ async function createAdmin() {
 
   await mongoose.connect(MONGODB_URI);
   const existing = await User.findOne({ email: ADMIN_EMAIL.toLowerCase().trim() });
-  if (existing) {
-    if (existing.role !== "ADMIN") throw new Error("That email already belongs to a non-admin account.");
-    console.log("Admin account already exists.");
-    return;
-  }
+  if (existing && existing.role !== "ADMIN") throw new Error("That email already belongs to a non-admin account.");
+  if (existing) return console.log("Admin account already exists.");
 
-  await User.create({ fullName: ADMIN_NAME.trim(), email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: "ADMIN" });
+  await User.create({ fullName: ADMIN_NAME.trim(), email: ADMIN_EMAIL.trim(), password: ADMIN_PASSWORD, role: "ADMIN" });
   console.log("Admin account created. Its password is stored as a bcrypt hash.");
 }
 
