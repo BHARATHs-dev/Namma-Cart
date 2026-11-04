@@ -5,15 +5,6 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 const emptyProduct = { name: "", category: "", price: "", discountPrice: "", stock: "", description: "", material: "", origin: "Tamil Nadu", artisanName: "" };
 
-function imageData(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Could not read the selected image."));
-    reader.readAsDataURL(file);
-  });
-}
-
 function ProductForm({ product, categories, onSave, onCancel }) {
   const [values, setValues] = useState(product ? {
     name: product.name, category: product.category, price: product.price,
@@ -30,7 +21,12 @@ function ProductForm({ product, categories, onSave, onCancel }) {
     event.preventDefault(); setError(""); setSaving(true);
     try {
       const body = { ...values, price: Number(values.price), discountPrice: Number(values.discountPrice || 0), stock: Number(values.stock) };
-      if (file) body.image = await imageData(file);
+      if (file) {
+        const upload = new FormData();
+        upload.append("images", file);
+        const uploaded = await request("/products/images", { method: "POST", body: upload });
+        body.image = uploaded.data.images[0];
+      }
       else if (!product) throw new Error("Choose a product image to upload.");
       await onSave(body);
     } catch (err) { setError(err.message); }
@@ -44,7 +40,7 @@ function ProductForm({ product, categories, onSave, onCancel }) {
     <div className="form-grid"><label>Price (₹)<input required type="number" min="0" step="0.01" value={values.price} onChange={(e) => setValues({ ...values, price: e.target.value })} /></label><label>Offer price (₹)<input type="number" min="0" step="0.01" value={values.discountPrice} onChange={(e) => setValues({ ...values, discountPrice: e.target.value })} /></label></div>
     <label>Available stock<input required type="number" min="0" step="1" value={values.stock} onChange={(e) => setValues({ ...values, stock: e.target.value })} /></label>
     <label>Product description<textarea required maxLength="5000" value={values.description} onChange={(e) => setValues({ ...values, description: e.target.value })} /></label>
-    <label>Product image {product && <small>Leave empty to keep the current image.</small>}<input type="file" accept="image/jpeg,image/png,image/webp" required={!product} onChange={(e) => { const selected = e.target.files?.[0]; if (selected && selected.size > 2 * 1024 * 1024) { setError("Image must be 2 MB or smaller."); setFile(null); setPreview(product?.images?.[0] || ""); e.target.value = ""; return; } setFile(selected || null); setPreview(selected ? URL.createObjectURL(selected) : product?.images?.[0] || ""); }} /></label>
+    <label>Product image {product && <small>Leave empty to keep the current image.</small>}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" required={!product} onChange={(e) => { const selected = e.target.files?.[0]; if (selected && selected.size > 5 * 1024 * 1024) { setError("Image must be 5 MB or smaller."); setFile(null); setPreview(product?.images?.[0] || ""); e.target.value = ""; return; } setFile(selected || null); setPreview(selected ? URL.createObjectURL(selected) : product?.images?.[0] || ""); }} /></label>
     {preview && <img className="seller-image-preview" src={preview} alt="Product preview" />}
     <div className="form-grid"><label>Material<input maxLength="200" value={values.material} onChange={(e) => setValues({ ...values, material: e.target.value })} /></label><label>Made in<input maxLength="200" value={values.origin} onChange={(e) => setValues({ ...values, origin: e.target.value })} /></label></div>
     <label>Artisan name<input maxLength="100" value={values.artisanName} onChange={(e) => setValues({ ...values, artisanName: e.target.value })} /></label>

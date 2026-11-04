@@ -11,6 +11,12 @@ const { successResponse } = require("../middleware/validation");
 async function registerSeller(req, res, next) {
   try {
     const { shopName, shopDescription, businessAddress } = req.body;
+    if (typeof shopName !== "string" || !shopName.trim() || typeof businessAddress !== "string" || !businessAddress.trim()) {
+      const error = new Error("Shop name and business address are required."); error.statusCode = 400; throw error;
+    }
+    if (shopDescription !== undefined && typeof shopDescription !== "string") {
+      const error = new Error("Shop description must be text."); error.statusCode = 400; throw error;
+    }
       const userId = req.user._id;
 
       const user = await User.findById(userId);

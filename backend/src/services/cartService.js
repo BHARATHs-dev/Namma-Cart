@@ -92,7 +92,12 @@ async function addToCart(userId, { productId, quantity = 1 }) {
     throw error;
   }
 
-  const requestedQty = Math.max(1, parseInt(quantity, 10) || 1);
+  const requestedQty = quantity === undefined ? 1 : Number(quantity);
+  if (!Number.isInteger(requestedQty) || requestedQty < 1) {
+    const error = new Error("Quantity must be a whole number greater than or equal to 1.");
+    error.statusCode = 400;
+    throw error;
+  }
 
   const product = await Product.findById(productId);
   if (!product || !product.isActive) {

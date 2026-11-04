@@ -14,7 +14,7 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Set `MONGODB_URI`, a long random `JWT_SECRET`, and `CLIENT_URL` in `.env`. Never commit `.env`; it is ignored by Git. Start MongoDB if using a local database, then start the API:
+Set `MONGODB_URI`, a long random `JWT_SECRET`, `CLIENT_ORIGIN`, and the three Cloudinary values in `.env`. Get the Cloudinary values from your Cloudinary account dashboard. Product image uploads use Cloudinary and return image URLs for product listings. Never commit `.env`; it is ignored by Git. Start MongoDB if using a local database, then start the API:
 
 ```powershell
 npm start

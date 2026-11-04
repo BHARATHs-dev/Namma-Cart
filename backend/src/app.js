@@ -1,7 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
 const { getDatabaseStatus } = require("./config/database");
 const { successResponse, errorResponse } = require("./middleware/validation");
 
@@ -18,8 +16,7 @@ const orderController = require("./controllers/orderController");
 
 const app = express();
 
-// Security and utility middleware
-app.use(helmet());
+// Utility middleware
 app.use(
   cors({
     origin: process.env.CLIENT_URL || process.env.CLIENT_ORIGIN || "http://localhost:5173",
@@ -27,7 +24,6 @@ app.use(
     exposedHeaders: ["X-Total-Count", "X-Total-Pages"],
   })
 );
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 

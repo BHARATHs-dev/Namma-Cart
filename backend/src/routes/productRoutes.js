@@ -1,64 +1,48 @@
 const express = require("express");
-const { body, param } = require("express-validator");
 const productController = require("../controllers/productController");
 const { authenticate } = require("../middleware/authentication");
-const { requireApprovedSeller } = require("../middleware/authorization");
-const { validateRequest } = require("../middleware/validation");
+const { authorize } = require("../middleware/authorization");
+const uploadProductImages = require("../middleware/productImageUpload");
+const { errorResponse } = require("../middleware/validation");
 
 const router = express.Router();
 const allowedFields = ["title", "price", "description", "category", "image", "rating"];
 
-function allowProductFields(req, res, next) {
+function checkProductInput(req, res, next) {
   const unexpected = Object.keys(req.body || {}).filter((key) => !allowedFields.includes(key));
   const ratingFields = Object.keys(req.body?.rating || {}).filter((key) => !["rate", "count"].includes(key));
-  if (unexpected.length || ratingFields.length) {
-    return errorResponse(res, 400, "Unexpected product fields", [...unexpected, ...ratingFields]);
+  if (unexpected.length || ratingFields.length) return errorResponse(res, 400, "Unexpected product fields.", [...unexpected, ...ratingFields]);
+  if (req.method === "POST") {
+    const required = ["title", "price", "description", "category", "image", "rating"];
+    const missing = required.filter((field) => req.body[field] === undefined || req.body[field] === "");
+    if (missing.length) return errorResponse(res, 400, `Required fields are missing: ${missing.join(", ")}`);
+  } else if (!Object.keys(req.body || {}).length) {
+    return errorResponse(res, 400, "Provide at least one product field.");
   }
-  if (!Object.keys(req.body || {}).length || (req.body.rating && !Object.keys(req.body.rating).length)) {
-    return errorResponse(res, 400, "Provide at least one valid product field");
+  if (req.body.title !== undefined && (typeof req.body.title !== "string" || !req.body.title.trim() || req.body.title.length > 200)) return errorResponse(res, 400, "Product title is required and must be 200 characters or fewer.");
+  if (req.body.description !== undefined && (typeof req.body.description !== "string" || !req.body.description.trim())) return errorResponse(res, 400, "Product description is required.");
+  if (req.body.category !== undefined && (typeof req.body.category !== "string" || !req.body.category.trim())) return errorResponse(res, 400, "Product category is required.");
+  if (req.body.price !== undefined && (!Number.isFinite(Number(req.body.price)) || Number(req.body.price) < 0)) return errorResponse(res, 400, "Price must be a non-negative number.");
+  if (req.body.image !== undefined && (typeof req.body.image !== "string" || !/^https?:\/\//i.test(req.body.image))) return errorResponse(res, 400, "Product image must be a valid URL.");
+  if (req.body.rating !== undefined) {
+    const { rate, count } = req.body.rating || {};
+    if (!Number.isFinite(Number(rate)) || Number(rate) < 0 || Number(rate) > 5) return errorResponse(res, 400, "Rating must be from 0 to 5.");
+    if (!Number.isInteger(Number(count)) || Number(count) < 0) return errorResponse(res, 400, "Review count must be a non-negative whole number.");
   }
   next();
 }
-
-const createValidation = [
-  body("title").trim().notEmpty().withMessage("Title is required").isLength({ max: 200 }),
-  body("price").isFloat({ min: 0 }).withMessage("Price must be a non-negative number"),
-  body("description").trim().notEmpty().withMessage("Description is required"),
-  body("category").trim().notEmpty().withMessage("Category is required"),
-  body("image").isURL({ require_protocol: true }).withMessage("Image must be a valid URL"),
-  body("rating").isObject().withMessage("Rating must be an object"),
-  body("rating.rate").isFloat({ min: 0, max: 5 }).withMessage("Rating rate must be from 0 to 5"),
-  body("rating.count").isInt({ min: 0 }).withMessage("Rating count must be a non-negative whole number"),
-];
-
-const updateValidation = [
-  body("title").optional().trim().notEmpty().withMessage("Title cannot be empty").isLength({ max: 200 }),
-  body("price").optional().isFloat({ min: 0 }).withMessage("Price must be a non-negative number"),
-  body("description").optional().trim().notEmpty().withMessage("Description cannot be empty"),
-  body("category").optional().trim().notEmpty().withMessage("Category cannot be empty"),
-  body("image").optional().isURL({ require_protocol: true }).withMessage("Image must be a valid URL"),
-  body("rating").optional().isObject().withMessage("Rating must be an object"),
-  body("rating.rate").optional().isFloat({ min: 0, max: 5 }).withMessage("Rating rate must be from 0 to 5"),
-  body("rating.count").optional().isInt({ min: 0 }).withMessage("Rating count must be a non-negative whole number"),
-];
 
 router.get("/categories", productController.getCategories);
 router.get("/categories/:slug", productController.getCategoryBySlug);
 router.get("/featured", productController.getFeaturedProducts);
 router.get("/search", productController.searchProducts);
 router.get("/category/:slug", productController.getProductsByCategorySlug);
-
-// Catalog list and single item retrieval
 router.get("/", productController.getAllProducts);
-router.get("/:id", validateRequest([param("id").isMongoId().withMessage("Invalid product ID")]), productController.getProductById);
+router.get("/:id", productController.getProductById);
 
-router.post("/", authenticate, authorize("ADMIN"), allowProductFields, validateRequest(createValidation), productController.createProduct);
-router.put("/:id", authenticate, authorize("ADMIN"), allowProductFields, validateRequest([
-  param("id").isMongoId().withMessage("Invalid product ID"),
-  ...updateValidation,
-]), productController.updateProduct);
-router.delete("/:id", authenticate, authorize("ADMIN"), validateRequest([
-  param("id").isMongoId().withMessage("Invalid product ID"),
-]), productController.deleteProduct);
+router.post("/images", authenticate, authorize("SELLER", "ADMIN"), uploadProductImages, productController.uploadProductImages);
+router.post("/", authenticate, authorize("ADMIN"), checkProductInput, productController.createProduct);
+router.put("/:id", authenticate, authorize("ADMIN"), checkProductInput, productController.updateProduct);
+router.delete("/:id", authenticate, authorize("ADMIN"), productController.deleteProduct);
 
 module.exports = router;

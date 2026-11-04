@@ -25,6 +25,15 @@ function generateToken(user) {
  * Register a new customer
  */
 async function registerCustomer({ fullName, email, phone, password }) {
+  if (typeof fullName !== "string" || !fullName.trim() || fullName.trim().length > 100) {
+    const error = new Error("Full name is required and must be 100 characters or fewer."); error.statusCode = 400; throw error;
+  }
+  if (typeof email !== "string" || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+    const error = new Error("Please provide a valid email address."); error.statusCode = 400; throw error;
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    const error = new Error("Password must be at least 6 characters long."); error.statusCode = 400; throw error;
+  }
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await User.findOne({ email: normalizedEmail });
@@ -59,6 +68,9 @@ async function registerCustomer({ fullName, email, phone, password }) {
  * Authenticate user with email and password
  */
 async function loginUser({ email, password }) {
+  if (typeof email !== "string" || !email.trim() || typeof password !== "string" || !password) {
+    const error = new Error("Email and password are required."); error.statusCode = 400; throw error;
+  }
   const normalizedEmail = email.toLowerCase().trim();
 
   const user = await User.findOne({ email: normalizedEmail }).select("+password");
@@ -111,6 +123,9 @@ async function getCurrentUser(userId) {
  * Generate password reset token
  */
 async function forgotPassword(email) {
+  if (typeof email !== "string" || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+    const error = new Error("Please provide a valid email address."); error.statusCode = 400; throw error;
+  }
   const normalizedEmail = email.toLowerCase().trim();
   const user = await User.findOne({ email: normalizedEmail });
 
@@ -148,6 +163,9 @@ async function resetPassword(token, newPassword) {
     const error = new Error("Reset token is required.");
     error.statusCode = 400;
     throw error;
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 6) {
+    const error = new Error("New password must be at least 6 characters long."); error.statusCode = 400; throw error;
   }
 
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -208,6 +226,9 @@ async function updateUserProfile(userId, updateData) {
 }
 
 async function changePassword(userId, currentPassword, newPassword) {
+  if (typeof currentPassword !== "string" || !currentPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    const error = new Error("Enter your current password and a new password with at least 6 characters."); error.statusCode = 400; throw error;
+  }
   const user = await User.findById(userId).select("+password");
 
   if (!user) {

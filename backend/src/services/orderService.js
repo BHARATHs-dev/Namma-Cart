@@ -56,7 +56,12 @@ async function validateAndCalculateCoupon(code, orderAmount) {
     throw error;
   }
 
-  const amount = Number(orderAmount) || 0;
+  const amount = orderAmount === undefined ? 0 : Number(orderAmount);
+  if (!Number.isFinite(amount) || amount < 0) {
+    const error = new Error("Order amount must be a non-negative number.");
+    error.statusCode = 400;
+    throw error;
+  }
   if (coupon.minimumOrderAmount && amount < coupon.minimumOrderAmount) {
     const error = new Error(
       `Minimum order amount of ₹${coupon.minimumOrderAmount} is required to apply coupon '${coupon.code}'.`

@@ -37,6 +37,13 @@ async function createReview(req, res, next) {
     const { productId, rating, comment } = req.body;
     const userId = req.user._id;
 
+    if (!Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5) {
+      const error = new Error("Rating must be a whole number from 1 to 5."); error.statusCode = 400; throw error;
+    }
+    if (typeof comment !== "string" || !comment.trim() || comment.length > 1000) {
+      const error = new Error("Review comment is required and must be 1000 characters or fewer."); error.statusCode = 400; throw error;
+    }
+
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       const error = new Error("Invalid product ID.");
       error.statusCode = 400;
@@ -123,6 +130,16 @@ async function updateReview(req, res, next) {
       const error = new Error("Invalid review ID.");
       error.statusCode = 400;
       throw error;
+    }
+
+    if (rating === undefined && comment === undefined) {
+      const error = new Error("Provide a rating or comment to update."); error.statusCode = 400; throw error;
+    }
+    if (rating !== undefined && (!Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5)) {
+      const error = new Error("Rating must be a whole number from 1 to 5."); error.statusCode = 400; throw error;
+    }
+    if (comment !== undefined && (typeof comment !== "string" || !comment.trim() || comment.length > 1000)) {
+      const error = new Error("Review comment must not be empty and must be 1000 characters or fewer."); error.statusCode = 400; throw error;
     }
 
     const review = await Review.findById(id);
