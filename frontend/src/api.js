@@ -27,7 +27,7 @@ export async function request(path, options = {}) {
     return Array.isArray(result) ? { success: true, data: { categories: result } } : { success: true, data: result };
   }
 
-  if (path.startsWith("/products")) {
+  if (path.startsWith("/products") && path !== "/products/images") {
     const fromApi = (product) => {
       const images = (Array.isArray(product.images) ? product.images : product.images ? [product.images] : [])
         .filter((image) => typeof image === "string" && image);
