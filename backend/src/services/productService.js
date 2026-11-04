@@ -41,8 +41,9 @@ function getCategoryBySlug(slug) {
 
 async function getAllProducts(queryParams = {}) {
   const page = Math.max(1, parseInt(queryParams.page, 10) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(queryParams.limit, 10) || 12));
-  const skip = (page - 1) * limit;
+  const allProducts = queryParams.page === undefined && queryParams.limit === undefined;
+  const limit = allProducts ? 0 : Math.max(1, Math.min(100, parseInt(queryParams.limit, 10) || 12));
+  const skip = allProducts ? 0 : (page - 1) * limit;
 
   const filter = { isActive: true };
 
@@ -87,6 +88,10 @@ async function getAllProducts(queryParams = {}) {
     filter.isFeatured = queryParams.isFeatured === "true" || queryParams.isFeatured === true;
   }
 
+  if (queryParams.minRating !== undefined && !isNaN(Number(queryParams.minRating))) {
+    filter.averageRating = { $gte: Math.max(0, Math.min(5, Number(queryParams.minRating))) };
+  }
+
   // Keyword search
   const keyword = queryParams.search || queryParams.q;
   if (keyword && keyword.trim()) {
@@ -122,12 +127,13 @@ async function getAllProducts(queryParams = {}) {
     }
   }
 
+  let productQuery = Product.find(filter)
+    .populate("seller", "fullName sellerDetails.shopName")
+    .sort(sortOption);
+  if (!allProducts) productQuery = productQuery.skip(skip).limit(limit);
+
   const [products, total] = await Promise.all([
-    Product.find(filter)
-      .populate("seller", "fullName sellerDetails.shopName")
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit),
+    productQuery,
     Product.countDocuments(filter),
   ]);
 
@@ -135,9 +141,9 @@ async function getAllProducts(queryParams = {}) {
     products,
     pagination: {
       page,
-      limit,
+      limit: allProducts ? total : limit,
       total,
-      totalPages: Math.ceil(total / limit) || 0,
+      totalPages: allProducts ? (total ? 1 : 0) : Math.ceil(total / limit) || 0,
     },
   };
 }
@@ -270,6 +276,8 @@ async function createProduct(data, user) {
       "isHandmade",
       "isFeatured",
       "isActive",
+      "averageRating",
+      "totalReviews",
     ];
 
     for (const field of updatableFields) {

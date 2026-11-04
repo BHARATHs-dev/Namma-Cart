@@ -1,101 +1,49 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { useState } from "react";
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import Header from "./components/Header.jsx";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { CartProvider } from "./context/CartContext.jsx";
+import ProductList from "./pages/ProductList.jsx";
+import ProductDetails from "./pages/ProductDetails.jsx";
+import Cart from "./pages/Cart.jsx";
+import Checkout from "./pages/Checkout.jsx";
+import Login from "./pages/Login.jsx";
+import SignUp from "./pages/SignUp.jsx";
+import SellerSignUp from "./pages/SellerSignUp.jsx";
+import Account from "./pages/Account.jsx";
+import OrderHistory from "./pages/OrderHistory.jsx";
+import OrderDetail from "./pages/OrderDetail.jsx";
+import SellerDashboard from "./pages/SellerDashboard.jsx";
+import { SellerOrders, SellerProducts } from "./pages/SellerOperations.jsx";
 
-const pages = [
-  ["products", "Shop"],
-  ["cart", "Your cart"],
-  ["checkout", "Checkout"],
-  ["login", "Log in"],
-  ["signup", "Create account"],
-  ["seller", "Sell with us"],
-  ["account", "My account"],
-  ["orders", "Order history"],
-  ["seller/dashboard", "Seller dashboard"],
-];
-
-function Home() {
-  return (
-    <main>
-      <section className="hero">
-        <div className="hero-copy">
-          <span className="eyebrow">GOOD FOOD, GOOD NEIGHBOURS</span>
-          <h1>Your neighborhood market, delivered.</h1>
-          <p>
-            Find fresh produce and everyday favorites from the local sellers
-            who make our community special.
-          </p>
-          <Link className="button button-dark" to="/products">
-            Explore the market <span aria-hidden="true">→</span>
-          </Link>
-        </div>
-        <div className="hero-art" role="img" aria-label="Fresh local produce">
-          <span className="produce produce-one" aria-hidden="true">🥑</span>
-          <span className="produce produce-two" aria-hidden="true">🍊</span>
-          <span className="produce produce-three" aria-hidden="true">🥬</span>
-          <span className="produce produce-four" aria-hidden="true">🍋</span>
-          <span className="art-note">Picked nearby<br />with care</span>
-        </div>
-      </section>
-      <section className="welcome">
-        <span className="eyebrow">A LITTLE CLOSER TO HOME</span>
-        <h2>Local finds. Everyday good.</h2>
-        <p>Discover the people and products that make your neighborhood unique.</p>
-      </section>
-    </main>
-  );
+function Protected({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <main className="page-content"><div className="empty-state">Loading your account…</div></main>;
+  return user ? children : <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
 }
 
-function PagePlaceholder({ title }) {
-  return (
-    <main className="page-placeholder">
-      <span className="eyebrow">NAMMA CART</span>
-      <h1>{title}</h1>
-      <p>This page is ready for its next feature.</p>
-      <Link className="text-link" to="/">Back to home <span aria-hidden="true">→</span></Link>
-    </main>
-  );
+function Layout() {
+  const [search, setSearch] = useState("");
+  return <div className="app-shell"><Header search={search} setSearch={setSearch} /><Routes>
+    <Route path="/" element={<ProductList />} />
+    <Route path="/products" element={<ProductList />} />
+    <Route path="/product/:id" element={<ProductDetails />} />
+    <Route path="/cart" element={<Cart />} />
+    <Route path="/checkout" element={<Protected><Checkout /></Protected>} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<SignUp />} />
+    <Route path="/seller" element={<SellerSignUp />} />
+    <Route path="/account" element={<Protected><Account /></Protected>} />
+    <Route path="/orders" element={<Protected><OrderHistory /></Protected>} />
+    <Route path="/orders/:id" element={<Protected><OrderDetail /></Protected>} />
+    <Route path="/seller/dashboard" element={<Protected><SellerDashboard /></Protected>} />
+    <Route path="/seller/products" element={<Protected><SellerProducts /></Protected>} />
+    <Route path="/seller/orders" element={<Protected><SellerOrders /></Protected>} />
+    <Route path="*" element={<main className="empty-state"><h1>We couldn’t find that page</h1><Link className="button button-primary" to="/">Back to the market</Link></main>} />
+  </Routes><footer className="site-footer"><div className="footer-brand"><span className="brand-mark">N</span><b>NammaCart</b></div><span>Namma Tradition. Namma Pride.</span><span>Celebrating Tamil Nadu’s crafts & culture</span></footer></div>;
 }
 
-function App() {
-  return (
-    <BrowserRouter>
-      <div className="app-shell">
-        <header className="site-header">
-          <Link className="brand" to="/" aria-label="Namma Cart home">
-            <span className="brand-mark" aria-hidden="true">n</span>
-            namma<span className="brand-light">cart</span>
-          </Link>
-          <nav className="main-nav" aria-label="Main navigation">
-            <Link to="/products">Shop</Link>
-            <Link to="/seller">Sell with us</Link>
-          </nav>
-          <div className="header-actions">
-            <Link className="login-link" to="/login">Log in</Link>
-            <Link className="cart-link" to="/cart">
-              Cart <span className="cart-count">0</span>
-            </Link>
-          </div>
-        </header>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          {pages.map(([path, title]) => (
-            <Route
-              key={path}
-              path={`/${path}`}
-              element={<PagePlaceholder title={title} />}
-            />
-          ))}
-          <Route path="*" element={<PagePlaceholder title="Page not found" />} />
-        </Routes>
-        <footer className="site-footer">
-          <Link className="brand footer-brand" to="/">
-            <span className="brand-mark" aria-hidden="true">n</span>
-            namma<span className="brand-light">cart</span>
-          </Link>
-          <span>Good things grow close to home.</span>
-        </footer>
-      </div>
-    </BrowserRouter>
-  );
+export default function App() {
+  return <BrowserRouter><AuthProvider><CartProvider><Layout /></CartProvider></AuthProvider></BrowserRouter>;
 }
-
-export default App;

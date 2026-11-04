@@ -24,6 +24,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || process.env.CLIENT_ORIGIN || "http://localhost:5173",
     credentials: true,
+    exposedHeaders: ["X-Total-Count", "X-Total-Pages"],
   })
 );
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -64,7 +65,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
   // Centralized error handling
   app.use((err, _req, res, _next) => {
     let statusCode = err.statusCode || 500;
-    let message = err.message || "Internal Server Error";
+    let message = statusCode >= 500 ? "Internal Server Error" : err.message || "Internal Server Error";
     let errors = [];
 
     // Mongoose Bad ObjectId (CastError)

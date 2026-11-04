@@ -31,7 +31,7 @@ async function registerSeller(req, res, next) {
     shopName: shopName.trim(),
     shopDescription: shopDescription ? shopDescription.trim() : "",
     businessAddress: businessAddress.trim(),
-    approvalStatus: "PENDING",
+    approvalStatus: "APPROVED",
   };
 
   await user.save();
@@ -43,7 +43,7 @@ async function registerSeller(req, res, next) {
   return successResponse(
     res,
     201,
-    "Seller registration submitted. Pending administrator approval.",
+    "Your seller account is ready. You can now list products.",
       { user: user.toSafeObject() }
   );
 } catch (error) {
@@ -263,8 +263,32 @@ async function getAnalytics(req, res, next) {
 
 async function updateProduct(req, res, next) {
   try {
-    const product = await productService.updateProduct(req.params.id, req.body, req.user);
+    const fields = ["name", "description", "price", "discountPrice", "stock", "category", "material", "origin", "artisanName"];
+    const changes = Object.fromEntries(fields.filter((field) => req.body[field] !== undefined).map((field) => [field, req.body[field]]));
+    if (req.body.image) changes.images = [req.body.image];
+    const product = await productService.updateProduct(req.params.id, changes, req.user);
     return successResponse(res, 200, "Product updated successfully", { product });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function createProduct(req, res, next) {
+  try {
+    const product = await productService.createProduct({
+      name: req.body.name,
+      description: req.body.description,
+      price: req.body.price,
+      discountPrice: req.body.discountPrice || 0,
+      stock: req.body.stock,
+      category: req.body.category,
+      images: [req.body.image],
+      material: req.body.material,
+      origin: req.body.origin,
+      artisanName: req.body.artisanName,
+      isHandmade: true,
+    }, req.user);
+    return successResponse(res, 201, "Product listed successfully", { product });
   } catch (error) {
     next(error);
   }
@@ -335,6 +359,7 @@ async function deleteProduct(req, res, next) {
     getProducts,
     getOrders,
     getAnalytics,
+    createProduct,
     updateProduct,
     deleteProduct,
     getApplications,
